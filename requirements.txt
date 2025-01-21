@@ -8,6 +8,7 @@ absl-py==0.11.0
     # via tensorboard
 aiohttp==3.7.4.post0
     # via fsspec
+appdirs
 async-timeout==3.0.1
     # via aiohttp
 attrs==20.3.0
@@ -36,7 +37,7 @@ google-auth==1.27.1
     # via
     #   google-auth-oauthlib
     #   tensorboard
-grpcio==1.36.1
+grpcio
     # via tensorboard
 idna==2.10
     # via
@@ -48,7 +49,7 @@ kiwisolver==1.3.1
     # via matplotlib
 markdown==3.3.4
     # via tensorboard
-matplotlib==3.3.4
+matplotlib
     # via
     #   -r requirements.in
     #   seaborn
@@ -58,7 +59,7 @@ multidict==5.1.0
     # via
     #   aiohttp
     #   yarl
-numpy==1.20.1
+numpy==1.23.5
     # via
     #   -r requirements.in
     #   matplotlib
@@ -71,7 +72,7 @@ numpy==1.20.1
     #   xgboost
 oauthlib==3.1.0
     # via requests-oauthlib
-pandas==1.2.3
+pandas
     # via
     #   -r requirements.in
     #   seaborn
@@ -110,7 +111,8 @@ requests==2.25.1
     #   tensorboard
 rsa==4.7.2
     # via google-auth
-scipy==1.6.1
+scikit-learn
+scipy
     # via
     #   seaborn
     #   xgboost
@@ -129,13 +131,13 @@ tensorboard-plugin-wit==1.8.0
     # via tensorboard
 tensorboard==2.4.1
     # via pytorch-lightning
-torch==1.11.0
+torch==1.13.1
     # via
     #   -r requirements.in
     #   pytorch-lightning
 tqdm==4.59.0
     # via pytorch-lightning
-typing-extensions==3.7.4.3
+typing-extensions
     # via
     #   aiohttp
     #   torch
@@ -143,11 +145,11 @@ urllib3==1.26.3
     # via requests
 werkzeug==1.0.1
     # via tensorboard
-wheel==0.36.2
+wheel
     # via tensorboard
 xgboost==1.3.3
     # via -r requirements.in
-yarl==1.6.3
+yarl
     # via aiohttp
 
 # The following packages are considered to be unsafe in a requirements file:
