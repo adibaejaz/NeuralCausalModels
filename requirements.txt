@@ -129,7 +129,7 @@ tensorboard-plugin-wit==1.8.0
     # via tensorboard
 tensorboard==2.4.1
     # via pytorch-lightning
-torch==1.8.0
+torch==1.11.0
     # via
     #   -r requirements.in
     #   pytorch-lightning

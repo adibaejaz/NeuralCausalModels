@@ -18,7 +18,7 @@ warnings.filterwarnings(
 warnings.filterwarnings("ignore", category=UserWarning,
                         module='pytorch_lightning.utilities.distributed')
 
-T.set_deterministic(True)
+T.use_deterministic_algorithms(True)
 
 priority_graphs = ["napkin"]
 valid_graphs = {"m", "backdoor", "frontdoor", "bow", "iv", "bad_m_2", "extended_bow"}

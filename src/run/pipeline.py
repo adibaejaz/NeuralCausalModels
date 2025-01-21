@@ -521,6 +521,111 @@ def send_email(subject, content=None, sender=None, recipient=None):
     s.quit()
 
 
+def run_score(folder_name, gen_model, dat, graph, n_epochs, n_reruns,
+           lockinfo=os.environ.get('SLURM_JOB_ID', ''), gpu=None):
+    pipeline = NLLNCMMaxPipeline
+   
+    # name of the output directory
+    d = 'out/IDExperiments/%s' % (folder_name)
+
+    with lock(f'{d}/lock', lockinfo) as acquired_lock:
+        if not acquired_lock:
+            print('[locked]', d)
+            return
+
+        try:
+            # return if best.th is generated (i.e. training is already complete)
+            if os.path.isfile(f'{d}/{n_reruns - 1}/best_max.th'):
+                print('[done]', d)
+                return
+
+            # since training is not complete, delete all directory files except for the lock
+            print('[running]', d)
+
+            # set random seed to a hash of the parameter settings for reproducibility
+            seed = int(hashlib.sha512(folder_name.encode()
+                                      ).hexdigest(), 16) & 0xffffffff
+            T.manual_seed(seed)
+            np.random.seed(seed)
+            print('Folder name:', folder_name)
+            print('Seed:', seed)
+
+
+            # function for building pytorch-lightning trainer
+            def create_trainer(rerun_trial, gpu=None):
+                checkpoint = pl.callbacks.ModelCheckpoint(dirpath=f'{d}/{rerun_trial}/checkpoints/')
+                trainer = pl.Trainer(
+                    callbacks=[
+                        checkpoint
+                    ],
+                    max_epochs=n_epochs,
+                    accumulate_grad_batches=1,
+                    logger=pl.loggers.TensorBoardLogger(f'{d}/{rerun_trial}/logs/'),
+                    log_every_n_steps=10,
+                    terminate_on_nan=True,
+                    gpus=gpu
+                )
+
+                return trainer, checkpoint
+
+            for r in range(n_reruns):
+                if not os.path.isfile(f'{d}/{r}/best_max.th'):
+                    # remove all files
+                    for file in glob.glob(f'{d}/{r}/*'):
+                        if os.path.isdir(file):
+                            shutil.rmtree(file)
+                        else:
+                            try:
+                                os.remove(file)
+                            except FileNotFoundError:
+                                pass
+
+                    # train model
+                    m_min = pipeline(gen_model, dat, graph, maximize=False, max_reg_upper=1.0, max_reg_lower=0.001,
+                                     total_iters=n_epochs)
+                    m_max = pipeline(gen_model, dat, graph, maximize=True, max_reg_upper=1.0, max_reg_lower=0.001,
+                                     total_iters=n_epochs)
+                    if gpu is None:
+                        gpu = int(T.cuda.is_available())
+                    trainer_min, min_checkpoint = create_trainer(r, gpu)
+                    trainer_max, max_checkpoint = create_trainer(r, gpu)
+                    print("\nTraining min model...")
+                    trainer_min.fit(m_min)
+                    ckpt = T.load(min_checkpoint.best_model_path)
+                    m_min.load_state_dict(ckpt['state_dict'])
+                    print("\nTraining max model...")
+                    trainer_max.fit(m_max)
+                    ckpt = T.load(max_checkpoint.best_model_path)
+                    m_max.load_state_dict(ckpt['state_dict'])
+
+                    results = metric.all_metrics_minmax(
+                        m_min.ctm, m_min.ncm, m_max.ncm, m_min.dat, m_min.cg_file, n=100000)
+                    print(results)
+
+                    # save results
+                    with open(f'{d}/{r}/results.json', 'w') as file:
+                        json.dump(results, file)
+                    T.save(m_min.state_dict(), f'{d}/{r}/best_min.th')
+                    T.save(m_max.state_dict(), f'{d}/{r}/best_max.th')
+                else:
+                    print("Done with run {}.".format(r))
+
+            T.save(dict(), f'{d}/best.th')  # breadcrumb file
+            return True
+        except Exception:
+            # move out/*/* to err/*/*/#
+            e = d.replace("out/", "err/").rsplit('-', 1)[0]
+            e_index = len(glob.glob(e + '/*'))
+            e += '/%s' % e_index
+            os.makedirs(e.rsplit('/', 1)[0], exist_ok=True)
+            shutil.move(d, e)
+            print(f'moved {d} to {e}')
+            raise
+
+
+
+
+
 if __name__ == '__main__':
     # define argparse types
     def dir_path(string):
